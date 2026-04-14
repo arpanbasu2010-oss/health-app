@@ -35,16 +35,19 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            # Pull the latest image
-            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/health-app:latest
-            
-            # Stop the old container (ignore error if it doesn't exist)
-            sudo docker stop health-app || true
-            sudo docker rm health-app || true
-            
-            # Run the new container using your prod.env file
-            sudo docker run -d \
-              --name health-app \
-              -p 8080:8080 \
-              --env-file prod.env \
-              ${{ secrets.DOCKERHUB_USERNAME }}/health-app:latest
+              # 1. Pull the latest image
+              sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/health-app:latest
+              
+              # 2. Kill and remove ANY container using port 8080 (the "nuclear" option)
+              sudo docker ps -q --filter "publish=8080" | xargs -r sudo docker rm -f
+              
+              # 3. Clean up by name just in case
+              sudo docker stop health-app || true
+              sudo docker rm health-app || true
+              
+              # 4. Run the new container
+              sudo docker run -d \
+                --name health-app \
+                -p 8080:8080 \
+                --env-file prod.env \
+                ${{ secrets.DOCKERHUB_USERNAME }}/health-app:latest
